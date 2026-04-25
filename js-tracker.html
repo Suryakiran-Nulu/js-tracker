@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>JS Mastery — Course Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#080c14;
+  --surface:rgba(255,255,255,0.04);
+  --surface-hover:rgba(255,255,255,0.07);
+  --glass:rgba(255,255,255,0.06);
+  --glass-border:rgba(255,255,255,0.1);
+  --glass-strong:rgba(255,255,255,0.12);
+  --text:#f0f2ff;
+  --muted:rgba(240,242,255,0.5);
+  --hint:rgba(240,242,255,0.25);
+  --accent:#7c6dfa;
+  --accent2:#38d9a9;
+  --accent3:#f7b731;
+  --accent4:#ff6b9d;
+  --d1:#4dabf7;
+  --d2:#38d9a9;
+  --d3:#ffd43b;
+  --d4:#da77f2;
+  --r:16px;--rs:10px;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Syne',sans-serif;
+  font-size:15px;
+  line-height:1.6;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* animated bg */
+.bg-orbs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.18;animation:orbFloat 12s ease-in-out infinite}
+.orb1{width:400px;height:400px;background:#7c6dfa;top:-100px;left:-100px;animation-delay:0s}
+.orb2{width:350px;height:350px;background:#38d9a9;top:40%;right:-120px;animation-delay:-4s}
+.orb3{width:300px;height:300px;background:#f7b731;bottom:-80px;left:30%;animation-delay:-8s}
+@keyframes orbFloat{
+  0%,100%{transform:translate(0,0) scale(1)}
+  33%{transform:translate(30px,-40px) scale(1.05)}
+  66%{transform:translate(-20px,30px) scale(0.97)}
+}
+
+.app{position:relative;z-index:1;max-width:460px;margin:0 auto;padding:24px 16px 60px}
+
+/* header */
+.header{margin-bottom:28px}
+.header-eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2);font-family:'DM Mono',monospace;margin-bottom:6px;opacity:0.8}
+.header h1{font-size:28px;font-weight:800;line-height:1.15;letter-spacing:-.02em;background:linear-gradient(135deg,#f0f2ff 30%,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header-sub{font-size:13px;color:var(--muted);margin-top:4px;font-family:'DM Mono',monospace}
+
+/* total progress ring card */
+.progress-card{
+  background:var(--glass);
+  border:0.5px solid var(--glass-border);
+  border-radius:20px;
+  padding:20px;
+  margin-bottom:24px;
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  display:flex;align-items:center;gap:20px;
+  position:relative;overflow:hidden;
+}
+.progress-card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(124,109,250,0.08),transparent 60%);
+  pointer-events:none;
+}
+.ring-wrap{position:relative;flex-shrink:0;width:72px;height:72px}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-bg{stroke:rgba(255,255,255,0.08);fill:none;stroke-width:5}
+.ring-fill{fill:none;stroke-width:5;stroke-linecap:round;
+  stroke:url(#ringGrad);
+  transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1);
+}
+.ring-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-pct{font-size:16px;font-weight:800;line-height:1;color:var(--text)}
+.ring-pct-sym{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
+.progress-info{flex:1}
+.progress-info h3{font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px}
+.progress-chapters{font-size:13px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:10px}
+.day-dots{display:flex;gap:6px;flex-wrap:wrap}
+.day-dot{display:flex;align-items:center;gap:5px;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* day selector tabs */
+.day-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:20px}
+.day-tab{
+  position:relative;padding:12px 6px 10px;
+  border:0.5px solid var(--glass-border);
+  border-radius:var(--r);background:var(--surface);
+  cursor:pointer;text-align:center;
+  transition:all .25s cubic-bezier(.4,0,.2,1);
+  overflow:hidden;
+}
+.day-tab::before{
+  content:'';position:absolute;inset:0;opacity:0;
+  transition:opacity .25s;
+}
+.day-tab.active::before{opacity:1}
+.tab-d1::before{background:linear-gradient(135deg,rgba(77,171,247,0.15),rgba(77,171,247,0.05))}
+.tab-d2::before{background:linear-gradient(135deg,rgba(56,217,169,0.15),rgba(56,217,169,0.05))}
+.tab-d3::before{background:linear-gradient(135deg,rgba(255,212,59,0.15),rgba(255,212,59,0.05))}
+.tab-d4::before{background:linear-gradient(135deg,rgba(218,119,242,0.15),rgba(218,119,242,0.05))}
+.day-tab.active{border-color:var(--glass-strong);transform:translateY(-1px)}
+.tab-d1.active{border-color:rgba(77,171,247,0.4)}
+.tab-d2.active{border-color:rgba(56,217,169,0.4)}
+.tab-d3.active{border-color:rgba(255,212,59,0.4)}
+.tab-d4.active{border-color:rgba(218,119,242,0.4)}
+.tab-num{font-size:10px;font-family:'DM Mono',monospace;color:var(--hint);letter-spacing:.06em;position:relative}
+.tab-label{font-size:13px;font-weight:700;color:var(--muted);margin-top:2px;position:relative;transition:color .25s}
+.day-tab.active .tab-label{color:var(--text)}
+.tab-d1.active .tab-label{color:#4dabf7}
+.tab-d2.active .tab-label{color:#38d9a9}
+.tab-d3.active .tab-label{color:#ffd43b}
+.tab-d4.active .tab-label{color:#da77f2}
+.tab-mini-bar{height:2px;border-radius:999px;margin-top:8px;background:rgba(255,255,255,0.08);overflow:hidden;position:relative}
+.tab-mini-fill{height:100%;border-radius:999px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+/* panels */
+.panel{display:none;animation:fadeUp .3s ease both}
+.panel.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* day header inside panel */
+.panel-header{
+  background:var(--glass);border:0.5px solid var(--glass-border);
+  border-radius:20px;padding:18px 20px;margin-bottom:16px;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  position:relative;overflow:hidden;
+}
+.panel-header::after{
+  content:'';position:absolute;top:0;right:0;width:120px;height:120px;
+  border-radius:50%;filter:blur(40px);opacity:.12;pointer-events:none;
+}
+.ph-d1::after{background:#4dabf7}.ph-d2::after{background:#38d9a9}
+.ph-d3::after{background:#ffd43b}.ph-d4::after{background:#da77f2}
+.panel-day-badge{
+  font-size:10px;font-family:'DM Mono',monospace;letter-spacing:.1em;
+  text-transform:uppercase;padding:3px 10px;border-radius:999px;
+  display:inline-block;margin-bottom:8px;
+}
+.bd1{background:rgba(77,171,247,0.15);color:#4dabf7;border:0.5px solid rgba(77,171,247,0.3)}
+.bd2{background:rgba(56,217,169,0.15);color:#38d9a9;border:0.5px solid rgba(56,217,169,0.3)}
+.bd3{background:rgba(255,212,59,0.15);color:#ffd43b;border:0.5px solid rgba(255,212,59,0.3)}
+.bd4{background:rgba(218,119,242,0.15);color:#da77f2;border:0.5px solid rgba(218,119,242,0.3)}
+.panel-title{font-size:17px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.01em}
+.panel-time{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:14px}
+.panel-bar-wrap{height:5px;background:rgba(255,255,255,0.07);border-radius:999px;overflow:hidden}
+.panel-bar-fill{height:100%;border-radius:999px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.pf1{background:linear-gradient(90deg,#4dabf7,#74c0fc)}.pf2{background:linear-gradient(90deg,#38d9a9,#63e6be)}
+.pf3{background:linear-gradient(90deg,#ffd43b,#ffe066)}.pf4{background:linear-gradient(90deg,#da77f2,#e599f7)}
+.panel-bar-label{font-size:11px;color:var(--muted);margin-top:6px;font-family:'DM Mono',monospace;display:flex;justify-content:space-between}
+
+/* section labels */
+.sec-label{
+  font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--hint);margin:20px 0 10px;display:flex;align-items:center;gap:8px;
+}
+.sec-label::after{content:'';flex:1;height:0.5px;background:var(--glass-border)}
+
+/* chapter items */
+.chapter-list{display:flex;flex-direction:column;gap:5px}
+.ch-item{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;
+  background:var(--surface);border:0.5px solid var(--glass-border);
+  border-radius:var(--r);cursor:pointer;
+  transition:all .2s cubic-bezier(.4,0,.2,1);
+  position:relative;overflow:hidden;
+}
+.ch-item::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  border-radius:0 2px 2px 0;background:var(--accent);
+  transform:scaleY(0);transition:transform .2s cubic-bezier(.4,0,.2,1);
+}
+.ch-item:active{transform:scale(0.99)}
+.ch-item.done{opacity:0.45}
+.ch-item.done::before{transform:scaleY(1)}
+.ch-item:not(.done):hover{background:var(--surface-hover);border-color:var(--glass-strong)}
+.ch-check{
+  width:22px;height:22px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.15);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:all .25s cubic-bezier(.4,0,.2,1);background:transparent;
+}
+.ch-item.done .ch-check{background:var(--accent2);border-color:var(--accent2);box-shadow:0 0 12px rgba(56,217,169,0.4)}
+.ch-check svg{opacity:0;transform:scale(0);transition:all .2s cubic-bezier(.4,0,.2,1)}
+.ch-item.done .ch-check svg{opacity:1;transform:scale(1)}
+.ch-body{flex:1;min-width:0}
+.ch-name{font-size:13px;font-weight:600;color:var(--text);transition:color .2s}
+.ch-item.done .ch-name{text-decoration:line-through;color:var(--hint)}
+.ch-meta{display:flex;align-items:center;gap:6px;margin-top:2px}
+.ch-time{font-size:11px;color:var(--hint);font-family:'DM Mono',monospace}
+.proj-pill{
+  font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 7px;border-radius:999px;
+  background:rgba(247,183,49,0.15);color:#ffd43b;border:0.5px solid rgba(247,183,49,0.3);
+}
+
+/* problems */
+.prob-item{
+  display:flex;align-items:center;gap:10px;padding:11px 14px;
+  background:var(--surface);border:0.5px solid var(--glass-border);
+  border-radius:var(--r);margin-bottom:5px;
+  transition:all .2s;
+}
+.prob-item:hover{background:var(--surface-hover)}
+.prob-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-family:'DM Mono',monospace;font-weight:600}
+.pi-easy{background:rgba(56,217,169,0.15);color:#38d9a9}
+.pi-medium{background:rgba(255,212,59,0.15);color:#ffd43b}
+.pi-custom{background:rgba(124,109,250,0.15);color:#a78bfa}
+.prob-name{font-size:13px;color:var(--text);flex:1;line-height:1.3}
+.prob-link{
+  font-size:11px;padding:4px 10px;border-radius:8px;
+  text-decoration:none;font-family:'DM Mono',monospace;font-weight:500;
+  flex-shrink:0;transition:all .2s;
+}
+.pl-easy{background:rgba(56,217,169,0.12);color:#38d9a9;border:0.5px solid rgba(56,217,169,0.25)}
+.pl-easy:hover{background:rgba(56,217,169,0.22)}
+.pl-medium{background:rgba(255,212,59,0.12);color:#ffd43b;border:0.5px solid rgba(255,212,59,0.25)}
+.pl-medium:hover{background:rgba(255,212,59,0.22)}
+
+/* REFRESH SECTION */
+.refresh-section{margin-top:24px}
+.refresh-header{
+  background:linear-gradient(135deg,rgba(124,109,250,0.1),rgba(56,217,169,0.05));
+  border:0.5px solid rgba(124,109,250,0.25);
+  border-radius:20px;padding:16px 18px;margin-bottom:12px;
+}
+.refresh-header-title{font-size:13px;font-weight:700;color:#c3b6fc;letter-spacing:-.01em}
+.refresh-header-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+.drb{margin-bottom:8px}
+.drb-trigger{
+  display:flex;align-items:center;gap:10px;padding:13px 16px;
+  background:var(--surface);border:0.5px solid var(--glass-border);
+  border-radius:var(--r);cursor:pointer;
+  transition:all .2s cubic-bezier(.4,0,.2,1);
+  user-select:none;
+}
+.drb-trigger:hover{background:var(--surface-hover);border-color:var(--glass-strong)}
+.drb-trigger.open{border-radius:var(--r) var(--r) 0 0;border-color:var(--glass-strong)}
+.drb-icon{
+  width:30px;height:30px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;font-size:11px;font-weight:700;
+  font-family:'DM Mono',monospace;
+}
+.drb-label{font-size:13px;font-weight:700;color:var(--text);flex:1}
+.drb-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px}
+.drb-arrow{
+  width:20px;height:20px;border-radius:50%;background:var(--glass);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .3s cubic-bezier(.4,0,.2,1);flex-shrink:0;
+}
+.drb-arrow svg{width:10px;height:10px;fill:var(--muted)}
+.drb-trigger.open .drb-arrow{transform:rotate(90deg)}
+
+.drb-body{
+  display:none;background:var(--surface);
+  border:0.5px solid var(--glass-strong);border-top:none;
+  border-radius:0 0 var(--r) var(--r);padding:16px 14px;
+}
+.drb-body.open{display:block;animation:fadeUp .2s ease both}
+
+/* quiz */
+.quiz-card{
+  background:rgba(124,109,250,0.06);border:0.5px solid rgba(124,109,250,0.2);
+  border-radius:var(--r);padding:16px;margin-bottom:10px;
+}
+.quiz-counter-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.quiz-counter{font-size:10px;font-family:'DM Mono',monospace;color:var(--hint);letter-spacing:.06em;text-transform:uppercase}
+.quiz-dots{display:flex;gap:4px}
+.qdot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.1);transition:background .2s}
+.qdot.answered{background:var(--accent)}
+.qdot.current{background:rgba(124,109,250,0.5);box-shadow:0 0 6px rgba(124,109,250,0.5)}
+.quiz-q{font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;line-height:1.45;letter-spacing:-.01em}
+.quiz-opts{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.qopt{
+  padding:10px 14px;border-radius:var(--rs);
+  border:0.5px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.03);
+  color:var(--muted);font-size:13px;font-family:'Syne',sans-serif;
+  cursor:pointer;text-align:left;width:100%;
+  transition:all .15s cubic-bezier(.4,0,.2,1);
+  display:flex;align-items:center;gap:10px;
+}
+.qopt-letter{
+  width:20px;height:20px;border-radius:5px;background:rgba(255,255,255,0.06);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-family:'DM Mono',monospace;color:var(--hint);flex-shrink:0;
+  transition:all .15s;
+}
+.qopt:not(:disabled):hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.2);color:var(--text)}
+.qopt:not(:disabled):hover .qopt-letter{background:rgba(124,109,250,0.2);color:var(--accent)}
+.qopt:disabled{cursor:default}
+.qopt.correct{background:rgba(56,217,169,0.1);border-color:rgba(56,217,169,0.35);color:#63e6be}
+.qopt.correct .qopt-letter{background:rgba(56,217,169,0.2);color:#38d9a9}
+.qopt.wrong{background:rgba(255,107,107,0.08);border-color:rgba(255,107,107,0.25);color:rgba(255,150,150,0.8)}
+.qopt.wrong .qopt-letter{background:rgba(255,107,107,0.15);color:#ff8787}
+.quiz-fb{
+  font-size:12px;line-height:1.5;color:var(--muted);
+  padding:10px 12px;border-radius:8px;
+  background:rgba(255,255,255,0.03);
+  border-left:2px solid var(--accent);
+  margin-bottom:12px;display:none;
+}
+.quiz-fb.show{display:block;animation:fadeUp .2s ease}
+.quiz-next{
+  width:100%;padding:10px;border-radius:var(--rs);
+  border:0.5px solid rgba(124,109,250,0.3);
+  background:rgba(124,109,250,0.1);color:#c3b6fc;
+  font-size:13px;font-family:'Syne',sans-serif;font-weight:700;
+  cursor:pointer;transition:all .2s;display:none;
+}
+.quiz-next.show{display:block}
+.quiz-next:hover{background:rgba(124,109,250,0.2);border-color:rgba(124,109,250,0.5)}
+.score-card{
+  background:linear-gradient(135deg,rgba(56,217,169,0.12),rgba(56,217,169,0.04));
+  border:0.5px solid rgba(56,217,169,0.3);
+  border-radius:var(--r);padding:20px;text-align:center;
+}
+.score-num{font-size:36px;font-weight:800;color:#38d9a9;line-height:1;letter-spacing:-.03em}
+.score-total{font-size:14px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:6px}
+.score-msg{font-size:13px;color:#63e6be;margin-bottom:14px;line-height:1.4}
+.score-bar-wrap{height:4px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;margin-bottom:14px}
+.score-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#38d9a9,#63e6be);transition:width .8s cubic-bezier(.4,0,.2,1)}
+.retry-btn{
+  padding:9px 20px;border-radius:var(--rs);
+  border:0.5px solid rgba(56,217,169,0.3);
+  background:rgba(56,217,169,0.1);color:#38d9a9;
+  font-size:12px;font-family:'Syne',sans-serif;font-weight:700;
+  cursor:pointer;transition:all .2s;
+}
+.retry-btn:hover{background:rgba(56,217,169,0.2)}
+
+/* custom problems */
+.custom-card{
+  background:rgba(255,255,255,0.03);border:0.5px solid var(--glass-border);
+  border-radius:var(--r);padding:14px;margin-bottom:7px;
+  transition:border-color .2s;
+}
+.custom-card:hover{border-color:var(--glass-strong)}
+.cp-tag{
+  font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:2px 8px;border-radius:999px;
+  background:rgba(124,109,250,0.15);color:#a78bfa;
+  border:0.5px solid rgba(124,109,250,0.25);
+  display:inline-block;margin-bottom:8px;font-family:'DM Mono',monospace;
+}
+.cp-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:5px;letter-spacing:-.01em}
+.cp-desc{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:10px;white-space:pre-line}
+.cp-code{
+  font-family:'DM Mono',monospace;font-size:12px;
+  background:rgba(0,0,0,0.3);border-radius:8px;
+  padding:10px 12px;color:#a9b4c9;border:0.5px solid rgba(255,255,255,0.06);
+  white-space:pre-wrap;margin-bottom:10px;line-height:1.6;overflow-x:auto;
+}
+.hint-toggle{
+  display:flex;align-items:center;gap:6px;
+  font-size:11px;color:var(--hint);cursor:pointer;
+  background:none;border:none;padding:0;font-family:'Syne',sans-serif;
+  transition:color .2s;
+}
+.hint-toggle:hover{color:var(--accent)}
+.hint-toggle svg{width:12px;height:12px;fill:currentColor;transition:transform .25s}
+.hint-toggle.open svg{transform:rotate(180deg)}
+.hint-text{
+  font-size:12px;color:#a78bfa;line-height:1.5;
+  padding:9px 12px;border-radius:8px;
+  background:rgba(124,109,250,0.08);border:0.5px solid rgba(124,109,250,0.15);
+  margin-top:8px;display:none;
+}
+.hint-text.open{display:block;animation:fadeUp .2s ease}
+
+/* reset */
+.reset-wrap{margin-top:32px;text-align:center}
+.reset-btn{
+  background:none;border:0.5px solid rgba(255,255,255,0.07);
+  border-radius:8px;padding:8px 16px;
+  font-size:11px;color:var(--hint);cursor:pointer;
+  font-family:'DM Mono',monospace;letter-spacing:.04em;
+  transition:all .2s;
+}
+.reset-btn:hover{border-color:rgba(255,107,107,0.3);color:#ff8787}
+
+/* toast */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:rgba(20,24,36,0.95);border:0.5px solid var(--glass-border);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-radius:12px;padding:10px 18px;font-size:13px;color:var(--text);
+  font-family:'DM Mono',monospace;pointer-events:none;
+  opacity:0;transition:all .3s cubic-bezier(.4,0,.2,1);
+  z-index:999;white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<div class="app">
+  <div class="header">
+    <div class="header-eyebrow">// your learning path</div>
+    <h1>JS Mastery</h1>
+    <div class="header-sub">Bro Code · 75 chapters · 4 days</div>
+  </div>
+
+  <div class="progress-card" id="total-card">
+    <div class="ring-wrap">
+      <svg width="72" height="72" viewBox="0 0 72 72">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#7c6dfa"/>
+            <stop offset="100%" stop-color="#38d9a9"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="36" cy="36" r="30"/>
+        <circle class="ring-fill" id="ring-fill" cx="36" cy="36" r="30"
+          stroke-dasharray="188.5"
+          stroke-dashoffset="188.5"/>
+      </svg>
+      <div class="ring-label">
+        <span class="ring-pct" id="ring-pct">0</span>
+        <span class="ring-pct-sym">%</span>
+      </div>
+    </div>
+    <div class="progress-info">
+      <h3>Overall progress</h3>
+      <div class="progress-chapters" id="total-chapters">0 / 75 done</div>
+      <div class="day-dots" id="day-dots"></div>
+    </div>
+  </div>
+
+  <div class="day-tabs" id="day-tabs"></div>
+  <div id="panels"></div>
+
+  <div class="reset-wrap">
+    <button class="reset-btn" onclick="resetAll()">↺ reset all progress</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DAYS=[
+  {id:0,label:'Day 1',color:'#4dabf7',badge:'bd1',pfill:'pf1',tcls:'tab-d1',
+   theme:'Foundations & Control Flow',time:'0:00 → 1:55',
+   chapters:[
+    {id:'c1',name:'JavaScript intro',time:'00:00',star:false},
+    {id:'c2',name:'Variables',time:'00:12',star:false},
+    {id:'c3',name:'Arithmetic operators',time:'00:25',star:false},
+    {id:'c4',name:'Accept user input',time:'00:33',star:false},
+    {id:'c5',name:'Type conversion',time:'00:39',star:false},
+    {id:'c6',name:'Constants',time:'00:44',star:false},
+    {id:'c7',name:'Counter program',time:'00:52',star:true},
+    {id:'c8',name:'Math object',time:'01:01',star:false},
+    {id:'c9',name:'Random number generator',time:'01:07',star:false},
+    {id:'c10',name:'If statements',time:'01:15',star:false},
+    {id:'c11',name:'Checked property',time:'01:31',star:false},
+    {id:'c12',name:'Ternary operator',time:'01:42',star:false},
+    {id:'c13',name:'Switches',time:'01:48',star:false},
+   ],
+   problems:[
+    {name:'Solve Me First',url:'https://www.hackerrank.com/challenges/solve-me-first/problem',level:'easy'},
+    {name:'Simple Array Sum',url:'https://www.hackerrank.com/challenges/simple-array-sum/problem',level:'easy'},
+    {name:'FizzBuzz',url:'https://leetcode.com/problems/fizz-buzz/',level:'easy'},
+    {name:'Compare the Triplets',url:'https://www.hackerrank.com/challenges/compare-the-triplets/problem',level:'easy'},
+   ]},
+  {id:1,label:'Day 2',color:'#38d9a9',badge:'bd2',pfill:'pf2',tcls:'tab-d2',
+   theme:'Strings, Loops & Functions',time:'2:03 → 4:10',
+   chapters:[
+    {id:'c14',name:'String methods',time:'02:03',star:false},
+    {id:'c15',name:'String slicing',time:'02:11',star:false},
+    {id:'c16',name:'Method chaining',time:'02:17',star:false},
+    {id:'c17',name:'Logical operators',time:'02:22',star:false},
+    {id:'c18',name:'Strict equality',time:'02:26',star:false},
+    {id:'c19',name:'While loops',time:'02:34',star:false},
+    {id:'c20',name:'For loops',time:'02:40',star:false},
+    {id:'c21',name:'Number guessing game',time:'02:49',star:true},
+    {id:'c22',name:'Functions',time:'02:49',star:false},
+    {id:'c23',name:'Variable scope',time:'03:01',star:false},
+    {id:'c24',name:'Temperature conversion',time:'03:07',star:true},
+    {id:'c25',name:'Arrays',time:'03:23',star:false},
+    {id:'c26',name:'Spread operator',time:'03:31',star:false},
+    {id:'c27',name:'Rest parameters',time:'03:36',star:false},
+    {id:'c28',name:'Dice Roller program',time:'03:44',star:true},
+    {id:'c29',name:'Random password generator',time:'03:58',star:true},
+   ],
+   problems:[
+    {name:'Reverse a String',url:'https://www.hackerrank.com/challenges/reverse-a-string/problem',level:'easy'},
+    {name:'Valid Palindrome',url:'https://leetcode.com/problems/valid-palindrome/',level:'easy'},
+    {name:'Counting Valleys',url:'https://www.hackerrank.com/challenges/counting-valleys/problem',level:'easy'},
+    {name:'Sock Merchant',url:'https://www.hackerrank.com/challenges/sock-merchant/problem',level:'easy'},
+    {name:'CamelCase',url:'https://www.hackerrank.com/challenges/camelcase/problem',level:'easy'},
+   ]},
+  {id:2,label:'Day 3',color:'#ffd43b',badge:'bd3',pfill:'pf3',tcls:'tab-d3',
+   theme:'Higher-order Functions & OOP',time:'4:10 → 6:10',
+   chapters:[
+    {id:'c30',name:'Callbacks',time:'04:10',star:false},
+    {id:'c31',name:'forEach()',time:'04:18',star:false},
+    {id:'c32',name:'map()',time:'04:26',star:false},
+    {id:'c33',name:'filter()',time:'04:33',star:false},
+    {id:'c34',name:'reduce()',time:'04:39',star:false},
+    {id:'c35',name:'Function expressions',time:'04:45',star:false},
+    {id:'c36',name:'Arrow functions',time:'04:52',star:false},
+    {id:'c37',name:'JavaScript objects',time:'05:00',star:false},
+    {id:'c38',name:'What is THIS',time:'05:07',star:false},
+    {id:'c39',name:'Constructors',time:'05:12',star:false},
+    {id:'c40',name:'Classes',time:'05:17',star:false},
+    {id:'c41',name:'STATIC keyword',time:'05:23',star:false},
+    {id:'c42',name:'Inheritance',time:'05:31',star:false},
+    {id:'c43',name:'SUPER keyword',time:'05:38',star:false},
+    {id:'c44',name:'Getters & Setters',time:'05:48',star:false},
+    {id:'c45',name:'Destructuring',time:'06:01',star:false},
+    {id:'c46',name:'Nested objects',time:'06:10',star:false},
+    {id:'c47',name:'Arrays of objects',time:'06:19',star:false},
+    {id:'c48',name:'Sorting',time:'06:29',star:false},
+    {id:'c49',name:'Shuffle an array',time:'06:36',star:false},
+    {id:'c50',name:'Dates',time:'06:40',star:false},
+    {id:'c51',name:'Closures',time:'06:48',star:false},
+   ],
+   problems:[
+    {name:'Filter Elements from Array',url:'https://leetcode.com/problems/filter-elements-from-array/',level:'easy'},
+    {name:'Apply Transform Over Each Element',url:'https://leetcode.com/problems/apply-transform-over-each-element-in-array/',level:'easy'},
+    {name:'Array Reduce Transformation',url:'https://leetcode.com/problems/array-reduce-transformation/',level:'easy'},
+    {name:'Create a Counter',url:'https://leetcode.com/problems/create-a-counter/',level:'easy'},
+    {name:'Group By',url:'https://leetcode.com/problems/group-by/',level:'medium'},
+   ]},
+  {id:3,label:'Day 4',color:'#da77f2',badge:'bd4',pfill:'pf4',tcls:'tab-d4',
+   theme:'DOM, Async & APIs',time:'6:48 → end',
+   chapters:[
+    {id:'c52',name:'setTimeout()',time:'06:59',star:false},
+    {id:'c53',name:'Digital Clock program',time:'07:05',star:true},
+    {id:'c54',name:'Stopwatch program',time:'07:16',star:true},
+    {id:'c55',name:'ES6 Modules',time:'07:34',star:false},
+    {id:'c56',name:'Asynchronous code',time:'07:40',star:false},
+    {id:'c57',name:'Error handling',time:'07:45',star:false},
+    {id:'c58',name:'Calculator program',time:'07:54',star:true},
+    {id:'c59',name:'What is the DOM?',time:'08:09',star:false},
+    {id:'c60',name:'Element selectors',time:'08:14',star:false},
+    {id:'c61',name:'DOM navigation',time:'08:32',star:false},
+    {id:'c62',name:'Add & change HTML',time:'08:47',star:false},
+    {id:'c63',name:'Mouse events',time:'09:03',star:false},
+    {id:'c64',name:'Key events',time:'09:13',star:false},
+    {id:'c65',name:'Hide/show HTML',time:'09:24',star:false},
+    {id:'c66',name:'NodeLists',time:'09:30',star:false},
+    {id:'c67',name:'classList',time:'09:43',star:false},
+    {id:'c68',name:'Rock Paper Scissors',time:'09:59',star:true},
+    {id:'c69',name:'Image Slider',time:'10:18',star:true},
+    {id:'c70',name:'Callback Hell?',time:'10:34',star:false},
+    {id:'c71',name:'Promises',time:'10:39',star:false},
+    {id:'c72',name:'Async/Await',time:'10:52',star:false},
+    {id:'c73',name:'JSON files',time:'10:57',star:false},
+    {id:'c74',name:'Fetch data from an API',time:'11:07',star:false},
+    {id:'c75',name:'Weather App project',time:'11:21',star:true},
+   ],
+   problems:[
+    {name:'Promise Time Limit',url:'https://leetcode.com/problems/promise-time-limit/',level:'medium'},
+    {name:'Sleep (async/await)',url:'https://leetcode.com/problems/sleep/',level:'easy'},
+    {name:'Execute Async Functions in Parallel',url:'https://leetcode.com/problems/execute-asynchronous-functions-in-parallel/',level:'medium'},
+    {name:'JSONPlaceholder API Challenge',url:'https://jsonplaceholder.typicode.com/',level:'medium'},
+    {name:'JavaScript30 DOM projects',url:'https://javascript30.com/',level:'medium'},
+   ]}
+];
+
+const REFRESH={
+  1:{days:[{
+    dayLabel:'Day 1',badge:'bd1',icon:'D1',iconCls:'pi-easy',color:'#4dabf7',
+    quiz:[
+      {q:'Which keyword creates a variable that cannot be reassigned?',opts:['var','let','const','function'],ans:2,exp:'const prevents reassignment of the binding. Reassigning throws a TypeError at runtime.'},
+      {q:'What does typeof 42 return?',opts:['"number"','"integer"','"string"','"float"'],ans:0,exp:'42 is a numeric literal. typeof always returns "number" for all JS numbers.'},
+      {q:'What is the result of 10 % 3?',opts:['3','1','0','3.33'],ans:1,exp:'% is modulo (remainder). 10 ÷ 3 = 3 remainder 1.'},
+      {q:'What does Math.floor(4.9) return?',opts:['5','4','4.9','NaN'],ans:1,exp:'Math.floor always rounds DOWN, so 4.9 → 4.'},
+      {q:'What does (0 ? "yes" : "no") evaluate to?',opts:['"yes"','"no"','0','undefined'],ans:1,exp:'0 is falsy, so the ternary takes the else branch: "no".'},
+    ],
+    external:[
+      {name:'Mini-Max Sum',url:'https://www.hackerrank.com/challenges/mini-max-sum/problem',level:'easy'},
+      {name:'Birthday Cake Candles',url:'https://www.hackerrank.com/challenges/birthday-cake-candles/problem',level:'easy'},
+      {name:'Number of Steps to Zero',url:'https://leetcode.com/problems/number-of-steps-to-reduce-a-number-to-zero/',level:'easy'},
+    ],
+    custom:[
+      {title:'Grade classifier',desc:'Write getGrade(score) → "A" (90-100), "B" (80-89), "C" (70-79), "D" (60-69), "F" (<60).',eg:'getGrade(85)  // "B"\ngetGrade(72)  // "C"\ngetGrade(55)  // "F"',hint:'Use else if chains. score >= 90 && score <= 100 for each band.'},
+      {title:'Even or odd — ternary only',desc:'Write isEven(n) using ONLY the ternary operator. No if/else allowed.',eg:'isEven(4)  // "even"\nisEven(7)  // "odd"',hint:'n % 2 === 0 is your condition. Plug into: condition ? "even" : "odd"'},
+      {title:'Random int in range',desc:'Write randInt(min, max) that returns a random integer between min and max inclusive.',eg:'randInt(1, 6)   // 1–6\nrandInt(10, 20) // 10–20',hint:'Math.floor(Math.random() * (max - min + 1)) + min'},
+    ]
+  }]},
+  2:{days:[
+    {
+      dayLabel:'Day 1',badge:'bd1',icon:'D1',iconCls:'pi-easy',color:'#4dabf7',
+      quiz:[
+        {q:'What is the value of: 5 === "5"?',opts:['true','false','undefined','TypeError'],ans:1,exp:'=== checks both value and type. 5 (number) and "5" (string) are different types — false.'},
+        {q:'What does 2 ** 3 evaluate to?',opts:['6','8','9','5'],ans:1,exp:'** is the exponentiation operator. 2 to the power 3 = 8.'},
+        {q:'What does Math.random() return?',opts:['0 to 100','0 (incl.) to 1 (excl.)','1 to 100','Always 0.5'],ans:1,exp:'A float >= 0 and < 1. Multiply and floor to get integers.'},
+        {q:'Which switch case syntax is invalid?',opts:['case 1:','case "a":','case true:','case 1-5:'],ans:3,exp:'Switch cases need single values. Ranges like 1-5 are not valid — use if/else for that.'},
+      ],
+      external:[
+        {name:'Staircase',url:'https://www.hackerrank.com/challenges/staircase/problem',level:'easy'},
+        {name:'Palindrome Number',url:'https://leetcode.com/problems/palindrome-number/',level:'easy'},
+      ],
+      custom:[
+        {title:'Guess the output (no running!)',desc:'Predict each line before checking:\n1. console.log(typeof null)\n2. console.log(1 + "2")\n3. console.log(true + true)\n4. console.log(10 !== "10")',eg:'1. "object"  — famous JS quirk\n2. "12"      — number coerced to string\n3. 2         — true = 1 in arithmetic\n4. true      — !== checks type too',hint:'+ with any string makes everything a string. Booleans become 0/1 in math context.'},
+      ]
+    },
+    {
+      dayLabel:'Day 2',badge:'bd2',icon:'D2',iconCls:'pi-easy',color:'#38d9a9',
+      quiz:[
+        {q:'What does "hello world".split(" ") return?',opts:['["hello world"]','["hello","world"]','"hello","world"','undefined'],ans:1,exp:'split() breaks a string on the delimiter and returns an array of parts.'},
+        {q:'What does array.push() return?',opts:['The pushed element','The new array length','The array','undefined'],ans:1,exp:'push() returns the NEW length of the array after adding the element.'},
+        {q:'What does "abc".slice(1,2) return?',opts:['"ab"','"b"','"bc"','"c"'],ans:1,exp:'slice(1,2) extracts from index 1 up to (not including) index 2 — just "b".'},
+        {q:'What does a function without a return statement return?',opts:['0','null','""','undefined'],ans:3,exp:'Functions without return implicitly return undefined.'},
+        {q:'What does [...arr1,...arr2] create?',opts:['Mutates arr1','A new merged array','undefined','A sorted array'],ans:1,exp:'Spread inside [] creates a new array merging both — arr1 and arr2 are untouched.'},
+      ],
+      external:[
+        {name:'Repeated String',url:'https://www.hackerrank.com/challenges/repeated-string/problem',level:'easy'},
+        {name:'Running Sum of 1D Array',url:'https://leetcode.com/problems/running-sum-of-1d-array/',level:'easy'},
+        {name:'Left Rotation',url:'https://www.hackerrank.com/challenges/array-left-rotation/problem',level:'easy'},
+      ],
+      custom:[
+        {title:'Longest word finder',desc:'Write longestWord(sentence) that returns the longest word. Return first if tie.',eg:'longestWord("I love JavaScript")  // "JavaScript"\nlongestWord("cat bat hat")       // "cat"',hint:'Split into array, loop comparing .length, track the longest word seen.'},
+        {title:'Array deduplicator',desc:'Write removeDuplicates(arr) — returns new array with duplicates removed, preserving order.',eg:'removeDuplicates([1,2,2,3,1,4])  // [1,2,3,4]',hint:'Loop and only push if the item is not already in the result array (.includes() helps).'},
+        {title:'Celsius array converter',desc:'Write convertAll(temps) that converts an array of Celsius values to Fahrenheit.\nFormula: F = C * 9/5 + 32',eg:'convertAll([0, 100, 37])  // [32, 212, 98.6]',hint:'Use a for loop, push each converted value into a new array, return it.'},
+      ]
+    }
+  ]},
+  3:{days:[
+    {
+      dayLabel:'Day 1',badge:'bd1',icon:'D1',iconCls:'pi-easy',color:'#4dabf7',
+      quiz:[
+        {q:'What does const prevent you from doing?',opts:['Using the variable','Reassigning it','Mutating its object value','All of the above'],ans:1,exp:'const prevents REASSIGNMENT only. You can still push to a const array or change object properties.'},
+        {q:'What is Boolean("") ?',opts:['true','false','""','undefined'],ans:1,exp:'Empty string is falsy in JS, so Boolean("") → false.'},
+        {q:'What does Math.max(3,7,2) return?',opts:['3','2','7','NaN'],ans:2,exp:'Math.max returns the largest value among its arguments — 7.'},
+      ],
+      external:[
+        {name:'Time Conversion',url:'https://www.hackerrank.com/challenges/time-conversion/problem',level:'easy'},
+        {name:'Diagonal Difference',url:'https://www.hackerrank.com/challenges/diagonal-difference/problem',level:'easy'},
+      ],
+      custom:[
+        {title:'Number classifier — nested ternary',desc:'Write classify(n) returning "positive", "negative", or "zero". Use nested ternary only — no if/else.',eg:'classify(5)   // "positive"\nclassify(-3)  // "negative"\nclassify(0)   // "zero"',hint:'n > 0 ? "positive" : n < 0 ? "negative" : "zero"'},
+      ]
+    },
+    {
+      dayLabel:'Day 2',badge:'bd2',icon:'D2',iconCls:'pi-easy',color:'#38d9a9',
+      quiz:[
+        {q:'What does "Hello".toUpperCase() return?',opts:['"Hello"','"HELLO"','"hello"','Error'],ans:1,exp:'toUpperCase() converts every character to uppercase.'},
+        {q:'Which rest parameter syntax is correct?',opts:['function f(a,...b)','function f(a,b...)','function f(...a,b)','function f(rest a)'],ans:0,exp:'Rest params use ... before the LAST parameter: ...b collects all remaining arguments.'},
+        {q:'What does [1,2,3].length return?',opts:['2','3','4','undefined'],ans:1,exp:'length returns the count of elements. [1,2,3] has 3.'},
+        {q:'What does let b = [...a] do?',opts:['Renames a','Creates a shallow copy of a','Sorts a into b','Reverses a'],ans:1,exp:'Spread inside [] creates a new array — a shallow copy. Changes to b do not affect a.'},
+        {q:'What is variable scope for let inside a function?',opts:['Global','That block only','Entire file','Module-wide'],ans:1,exp:'let is block-scoped — exists only within its enclosing { } block.'},
+      ],
+      external:[
+        {name:'Concatenation of Array',url:'https://leetcode.com/problems/concatenation-of-array/',level:'easy'},
+        {name:'Richest Customer Wealth',url:'https://leetcode.com/problems/richest-customer-wealth/',level:'easy'},
+      ],
+      custom:[
+        {title:'Function factory (closure preview)',desc:'Write makeMultiplier(x) that RETURNS a function. The returned function takes n and returns x * n.',eg:'const double = makeMultiplier(2);\ndouble(5)  // 10\ndouble(3)  // 6\n\nconst triple = makeMultiplier(3);\ntriple(4)  // 12',hint:'return function(n){ return x * n; } — the inner function closes over x.'},
+        {title:'Flatten one level',desc:'Write flatten(arr) that takes an array of arrays and returns a single flat array.',eg:'flatten([[1,2],[3,4],[5]])  // [1,2,3,4,5]',hint:'Use a for loop with result.push(...subArray). Or use [].concat(...arr).'},
+      ]
+    }
+  ]}
+};
+
+let state={},activeDay=0,quizSt={},openBlocks={};
+const letters=['A','B','C','D'];
+
+function load(){try{state=JSON.parse(localStorage.getItem('jsm4')||'{}')}catch(e){state={}}}
+function save(){localStorage.setItem('jsm4',JSON.stringify(state))}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+function toggleCh(id){
+  const was=state[id];
+  state[id]=!state[id];save();
+  const el=document.querySelector('.ch-item[data-id="'+id+'"]');
+  if(el) el.classList.toggle('done',!!state[id]);
+  if(!was) showToast('Chapter done ✓');
+  updateAllProgress();
+}
+
+function updateAllProgress(){
+  const all=DAYS.flatMap(d=>d.chapters);
+  const done=all.filter(c=>state[c.id]).length;
+  const pct=Math.round(done/all.length*100);
+  const circ=188.5;
+  const offset=circ-(circ*pct/100);
+  document.getElementById('ring-fill').style.strokeDashoffset=offset;
+  document.getElementById('ring-pct').textContent=pct;
+  document.getElementById('total-chapters').textContent=done+' / '+all.length+' done';
+
+  DAYS.forEach(day=>{
+    const dd=day.chapters.filter(c=>state[c.id]).length;
+    const dt=day.chapters.length;
+    const dp=Math.round(dd/dt*100);
+    const bar=document.querySelector('.pbar-'+day.id);
+    if(bar) bar.style.width=dp+'%';
+    const lbl=document.querySelector('.pbar-label-'+day.id);
+    if(lbl) lbl.textContent=dd+'/'+dt;
+    const tmb=document.querySelector('.tmb-'+day.id);
+    if(tmb) tmb.style.width=dp+'%';
+    const dot=document.querySelector('.ddot-'+day.id);
+    if(dot) dot.textContent=dd+'/'+dt;
+  });
+}
+
+function switchDay(i){
+  activeDay=i;
+  document.querySelectorAll('.day-tab').forEach((t,j)=>t.classList.toggle('active',j===i));
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+}
+
+function toggleBlock(bk){
+  openBlocks[bk]=!openBlocks[bk];
+  const trigger=document.querySelector('.drbt-'+bk);
+  const body=document.getElementById('drbb-'+bk);
+  if(trigger) trigger.classList.toggle('open',!!openBlocks[bk]);
+  if(body) body.classList.toggle('open',!!openBlocks[bk]);
+}
+
+function answerQ(bk,chosen){
+  const st=quizSt[bk];if(!st||st.answered||st.done)return;
+  const parts=bk.split('-');
+  const di=parseInt(parts[0]),pdi=parseInt(parts[1]);
+  const pd=REFRESH[di].days[pdi];
+  const q=pd.quiz[st.idx];
+  st.answered=true;st.chosen=chosen;
+  if(chosen===q.ans)st.score++;
+  const opts=document.querySelectorAll('.qopts-'+bk+' .qopt');
+  opts.forEach((o,i)=>{
+    o.disabled=true;
+    if(i===q.ans)o.classList.add('correct');
+    else if(i===chosen&&i!==q.ans)o.classList.add('wrong');
+  });
+  const fb=document.getElementById('qfb-'+bk);
+  if(fb){fb.textContent=q.exp;fb.classList.add('show')}
+  const nx=document.getElementById('qnx-'+bk);
+  if(nx)nx.classList.add('show');
+  updateQuizDots(bk,pd.quiz.length,st.idx,true);
+}
+
+function nextQ(bk){
+  const st=quizSt[bk];
+  const parts=bk.split('-');
+  const di=parseInt(parts[0]),pdi=parseInt(parts[1]);
+  const pd=REFRESH[di].days[pdi];
+  st.idx++;st.answered=false;st.chosen=null;
+  if(st.idx>=pd.quiz.length){st.done=true;renderScoreCard(bk,st,pd.quiz.length);return;}
+  renderQuizQ(bk,pd,st);
+}
+
+function retryQ(bk){
+  const parts=bk.split('-');
+  const di=parseInt(parts[0]),pdi=parseInt(parts[1]);
+  const pd=REFRESH[di].days[pdi];
+  quizSt[bk]={idx:0,score:0,answered:false,done:false,chosen:null};
+  renderQuizQ(bk,pd,quizSt[bk]);
+}
+
+function updateQuizDots(bk,total,idx,answered){
+  const container=document.getElementById('qdots-'+bk);
+  if(!container)return;
+  const st=quizSt[bk]||{};
+  container.innerHTML=Array.from({length:total},(_,i)=>{
+    let cls='qdot';
+    if(i<idx)cls+=' answered';
+    else if(i===idx)cls+=answered?' answered':' current';
+    return '<div class="'+cls+'"></div>';
+  }).join('');
+}
+
+function renderQuizQ(bk,pd,st){
+  const qc=document.getElementById('qcontent-'+bk);
+  if(!qc)return;
+  const q=pd.quiz[st.idx];
+  qc.innerHTML=`
+    <div class="quiz-counter-row">
+      <div class="quiz-counter">Question ${st.idx+1} of ${pd.quiz.length}</div>
+      <div class="quiz-dots" id="qdots-${bk}">
+        ${Array.from({length:pd.quiz.length},(_,i)=>`<div class="qdot${i===st.idx?' current':''}"></div>`).join('')}
+      </div>
+    </div>
+    <div class="quiz-q">${q.q}</div>
+    <div class="quiz-opts qopts-${bk}">
+      ${q.opts.map((o,i)=>`
+        <button class="qopt" onclick="answerQ('${bk}',${i})">
+          <span class="qopt-letter">${letters[i]}</span>
+          ${o}
+        </button>
+      `).join('')}
+    </div>
+    <div class="quiz-fb" id="qfb-${bk}"></div>
+    <button class="quiz-next" id="qnx-${bk}" onclick="nextQ('${bk}')">Next question →</button>
+  `;
+}
+
+function renderScoreCard(bk,st,total){
+  const qc=document.getElementById('qcontent-'+bk);
+  if(!qc)return;
+  const pct=Math.round(st.score/total*100);
+  const msg=pct>=80?'Excellent recall! You\'re ready to crush today.':pct>=50?'Decent! Worth a quick skim of the tricky spots.':'Recommend re-reading that day before diving in.';
+  qc.innerHTML=`
+    <div class="score-card">
+      <div class="score-num">${st.score}</div>
+      <div class="score-total">out of ${total} correct</div>
+      <div class="score-bar-wrap"><div class="score-bar-fill" style="width:${pct}%"></div></div>
+      <div class="score-msg">${msg}</div>
+      <button class="retry-btn" onclick="retryQ('${bk}')">↺ Retry quiz</button>
+    </div>
+  `;
+}
+
+function toggleHint(id){
+  const btn=document.getElementById('hbtn-'+id);
+  const txt=document.getElementById('htxt-'+id);
+  if(!btn||!txt)return;
+  const open=txt.classList.toggle('open');
+  btn.classList.toggle('open',open);
+}
+
+function resetAll(){
+  if(confirm('Reset all progress? This cannot be undone.')){
+    state={};save();
+    document.querySelectorAll('.ch-item').forEach(el=>el.classList.remove('done'));
+    updateAllProgress();
+    showToast('Progress reset');
+  }
+}
+
+function buildTabs(){
+  const container=document.getElementById('day-tabs');
+  const dots=document.getElementById('day-dots');
+  container.innerHTML='';dots.innerHTML='';
+  DAYS.forEach((day,i)=>{
+    const done=day.chapters.filter(c=>state[c.id]).length;
+    const pct=Math.round(done/day.chapters.length*100);
+    const tab=document.createElement('div');
+    tab.className='day-tab '+day.tcls+(i===activeDay?' active':'');
+    tab.onclick=()=>switchDay(i);
+    tab.innerHTML=`
+      <div class="tab-num">0${i+1}</div>
+      <div class="tab-label">${day.label}</div>
+      <div class="tab-mini-bar">
+        <div class="tab-mini-fill tmb-${day.id}" style="width:${pct}%;background:${day.color}"></div>
+      </div>
+    `;
+    container.appendChild(tab);
+    const dot=document.createElement('div');
+    dot.className='day-dot';
+    dot.innerHTML=`<div class="dot" style="background:${day.color}"></div><span class="ddot-${day.id}">${done}/${day.chapters.length}</span>`;
+    dots.appendChild(dot);
+  });
+}
+
+function buildPanels(){
+  const container=document.getElementById('panels');
+  container.innerHTML='';
+  DAYS.forEach((day,di)=>{
+    const done=day.chapters.filter(c=>state[c.id]).length;
+    const total=day.chapters.length;
+    const pct=Math.round(done/total*100);
+    const panel=document.createElement('div');
+    panel.className='panel'+(di===activeDay?' active':'');
+    panel.id='panel-'+di;
+
+    let html=`
+      <div class="panel-header ph-d${di+1}">
+        <div class="panel-day-badge ${day.badge}">${day.label}</div>
+        <div class="panel-title">${day.theme}</div>
+        <div class="panel-time">${day.time}</div>
+        <div class="panel-bar-wrap">
+          <div class="panel-bar-fill ${day.pfill} pbar-${day.id}" style="width:${pct}%"></div>
+        </div>
+        <div class="panel-bar-label">
+          <span class="pbar-label-${day.id}">${done}/${total}</span>
+          <span>${pct}%</span>
+        </div>
+      </div>
+
+      <div class="sec-label">Chapters</div>
+      <div class="chapter-list">
+        ${day.chapters.map(c=>`
+          <div class="ch-item${state[c.id]?' done':''}" data-id="${c.id}" onclick="toggleCh('${c.id}')">
+            <div class="ch-check">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M1.5 5L4 7.5L8.5 2.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="ch-body">
+              <div class="ch-name">${c.name}${c.star?'<span class="proj-pill">project</span>':''}</div>
+              <div class="ch-meta">
+                <span class="ch-time">${c.time}</span>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="sec-label">Practice problems</div>
+      ${day.problems.map(p=>`
+        <div class="prob-item">
+          <div class="prob-icon ${p.level==='easy'?'pi-easy':'pi-medium'}">${p.level==='easy'?'E':'M'}</div>
+          <span class="prob-name">${p.name}</span>
+          <a class="prob-link ${p.level==='easy'?'pl-easy':'pl-medium'}" href="${p.url}" target="_blank">Open →</a>
+        </div>
+      `).join('')}
+    `;
+
+    const ref=REFRESH[di];
+    if(ref){
+      html+=`
+        <div class="refresh-section">
+          <div class="refresh-header">
+            <div class="refresh-header-title">↻ Refresh before Day ${di+1}</div>
+            <div class="refresh-header-sub">Quiz + problems for each previous day</div>
+          </div>
+      `;
+      ref.days.forEach((pd,pdi)=>{
+        const bk=`${di}-${pdi}`;
+        if(!quizSt[bk]) quizSt[bk]={idx:0,score:0,answered:false,done:false,chosen:null};
+        const isOpen=!!openBlocks[bk];
+        html+=`
+          <div class="drb">
+            <div class="drb-trigger drbt-${bk}${isOpen?' open':''}" onclick="toggleBlock('${bk}')">
+              <div class="drb-icon" style="background:${pd.color}22;color:${pd.color};border:0.5px solid ${pd.color}44">${pd.icon||pd.dayLabel.replace('Day ','D')}</div>
+              <div style="flex:1">
+                <div class="drb-label">${pd.dayLabel} concepts</div>
+                <div class="drb-sub">${pd.quiz.length} quiz · ${pd.external.length} linked · ${pd.custom.length} challenges</div>
+              </div>
+              <div class="drb-arrow">
+                <svg viewBox="0 0 8 12"><path d="M1 1l6 5-6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+              </div>
+            </div>
+            <div class="drb-body${isOpen?' open':''}" id="drbb-${bk}">
+              <div class="sec-label" style="margin-top:0">Quick quiz</div>
+              <div class="quiz-card">
+                <div id="qcontent-${bk}">
+                  ${buildQuizHTML(bk,pd,quizSt[bk])}
+                </div>
+              </div>
+
+              <div class="sec-label">Linked problems</div>
+              ${pd.external.map(p=>`
+                <div class="prob-item">
+                  <div class="prob-icon ${p.level==='easy'?'pi-easy':'pi-medium'}">${p.level==='easy'?'E':'M'}</div>
+                  <span class="prob-name">${p.name}</span>
+                  <a class="prob-link ${p.level==='easy'?'pl-easy':'pl-medium'}" href="${p.url}" target="_blank">Open →</a>
+                </div>
+              `).join('')}
+
+              <div class="sec-label">Write-it-yourself</div>
+              <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Solve in browser console or a JS playground.</p>
+              ${pd.custom.map((cp,ci)=>{
+                const hid=`${bk}-${ci}`;
+                return `
+                <div class="custom-card">
+                  <div class="cp-tag">challenge</div>
+                  <div class="cp-title">${cp.title}</div>
+                  <div class="cp-desc">${cp.desc}</div>
+                  <div class="cp-code">${cp.eg}</div>
+                  <button class="hint-toggle" id="hbtn-${hid}" onclick="toggleHint('${hid}')">
+                    <svg viewBox="0 0 12 12"><path d="M6 1a5 5 0 100 10A5 5 0 006 1zm0 8v-4m0-2V3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none"/></svg>
+                    Show hint
+                  </button>
+                  <div class="hint-text" id="htxt-${hid}">${cp.hint}</div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      });
+      html+=`</div>`;
+    }
+
+    panel.innerHTML=html;
+    container.appendChild(panel);
+  });
+}
+
+function buildQuizHTML(bk,pd,st){
+  if(st.done){
+    const pct=Math.round(st.score/pd.quiz.length*100);
+    const msg=pct>=80?'Excellent recall! Ready to go.':pct>=50?'Decent — skim the weak spots.':'Recommend re-reading before continuing.';
+    return `<div class="score-card">
+      <div class="score-num">${st.score}</div>
+      <div class="score-total">out of ${pd.quiz.length} correct</div>
+      <div class="score-bar-wrap"><div class="score-bar-fill" style="width:${pct}%"></div></div>
+      <div class="score-msg">${msg}</div>
+      <button class="retry-btn" onclick="retryQ('${bk}')">↺ Retry quiz</button>
+    </div>`;
+  }
+  const q=pd.quiz[st.idx];
+  return `
+    <div class="quiz-counter-row">
+      <div class="quiz-counter">Question ${st.idx+1} of ${pd.quiz.length}</div>
+      <div class="quiz-dots" id="qdots-${bk}">
+        ${Array.from({length:pd.quiz.length},(_,i)=>`<div class="qdot${i===st.idx?' current':''}"></div>`).join('')}
+      </div>
+    </div>
+    <div class="quiz-q">${q.q}</div>
+    <div class="quiz-opts qopts-${bk}">
+      ${q.opts.map((o,i)=>`
+        <button class="qopt" onclick="answerQ('${bk}',${i})">
+          <span class="qopt-letter">${letters[i]}</span>${o}
+        </button>
+      `).join('')}
+    </div>
+    <div class="quiz-fb" id="qfb-${bk}"></div>
+    <button class="quiz-next" id="qnx-${bk}" onclick="nextQ('${bk}')">Next question →</button>
+  `;
+}
+
+load();
+buildTabs();
+buildPanels();
+updateAllProgress();
+</script>
+</body>
+</html>
